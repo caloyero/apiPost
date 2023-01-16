@@ -4,7 +4,10 @@ var express = require('express');
 var mysql = require('mysql');
 
 var api = express();
+
+var cors = require('cors')
 api.use(express.json());
+api.use(cors());
 
 
 var connection = mysql.createConnection({
@@ -72,7 +75,7 @@ api.put('/api/post/:id',(request,response)=>{
     let titulo = request.body.titulo;
     let contenido = request.body.contenido;
     let usuarios_id = request.body.usuarios_id;
-    let sql = "UPDATE posT SET titulo = ?, contenido = ?, usuarios_id = ? WHERE id = ?";
+    let sql = "UPDATE post SET titulo = ?, contenido = ?, usuarios_id = ? WHERE id = ?";
 
     connection.query(sql, [titulo, contenido, usuarios_id, id], function(error, result)
     {
@@ -90,7 +93,7 @@ api.put('/api/post/:id',(request,response)=>{
 api.put('/api/post/likes/:id',(request,response)=>{
     let id = request.params.id;
     let likes = request.body.likes;
-    let sql = "UPDATE posT SET likes = ? WHERE id = ?";
+    let sql = "UPDATE post SET likes = ? WHERE id = ?";
 
     connection.query(sql, [likes, id], function(error, result)
     {
@@ -107,6 +110,7 @@ api.put('/api/post/likes/:id',(request,response)=>{
 // usuario
 
 api.get('/api/user/:id',(request,response)=>{
+    
     connection.query('SELECT * FROM usuarios WHERE id = ?',[request.params.id],(error,fila)=>{
         if(error)
         {
@@ -117,8 +121,11 @@ api.get('/api/user/:id',(request,response)=>{
     })
 });
 // foto de  perfil
-api.get('/api/userPerfil/:id',(request,response)=>{
-    connection.query('SELECT foto_de_perfil FROM usuarios WHERE id = ?',[request.params.id],(error,fila)=>{
+api.post('/api/user/aunt', (request,response)=>{
+    const {email,password} = request.body;
+   /*  let email= request.body.email;
+    let password = request.body.password; */
+    connection.query('SELECT * FROM usuarios WHERE email = ? AND password = ?',[email, password],(error,fila)=>{
         if(error)
         {
             throw error;
@@ -137,11 +144,11 @@ api.get('/api/postFromUserId/:id',(request,response)=>{
             response.send(fila);
         }
     })
-})
+});
 
 /* comentarios */
 
-api.get('/api/comentariosFromPostId/:id',(request,response)=>{
+api.get('/api/comentarios/:id',(request,response)=>{
     connection.query('SELECT * FROM comentarios WHERE post_id = ?',[request.params.id],(error, fila)=>{
         if(error)
         {
@@ -150,9 +157,67 @@ api.get('/api/comentariosFromPostId/:id',(request,response)=>{
             response.send(fila);
         }
     })
+});
+
+api.post('api/comen',(request,response)=>{
+    let dataComentarios={
+        comentario:request.body.comentario,
+        post_id:request.body.post_id,
+        usuarios_id:request.body.usuarios_id,
+    };
+    let sqlComentarios = "INSERT INTO comentarios SET ?"
+    connection.query(sqlComentarios, dataComentarios, function(error,result)
+    {
+        if (error) {
+            throw error
+        }else{
+            response.send(result,dataComentarios);
+        }
+    });
+
+});
+
+/* crear post  */
+api.post('/api/comentarios', (request,response)=>{
+    let datosComentario ={
+        post_id:request.body.post_id,
+        comentario:request.body.comentario,
+        usuarios_id:request.body.usuarios_id,
+    };
+
+    let sql = "INSERT INTO comentarios SET ?";
+    connection.query(sql, datosComentario, function(error,result)
+    {
+        if (error) {
+            throw error
+        }else{
+            response.send(result);
+        }
+    });
+});
+
+/* notificaciones */
+
+api.get('/api/post/notificaciones/:id',(request,response)=>{
+    connection.query('SELECT N.tipo,U.nombre,U.apellido,U.foto_de_perfil FROM notificaciones N LEFT JOIN usuarios U ON N.id_usuario = U.id LEFT JOIN post P ON N.id_post = P.id WHERE P.usuarios_id = ?',[request.params.id], (error,fila)=>{
+        if (error) {
+            throw error
+        }else{
+            response.send(fila);
+        }
+    })
 })
 
-var port = 3000
+/* Chat */
+api.get('/api/chat/:id',(request,response)=>{
+    connection.query('SELECT DISTINCT CH.id, MR.mensaje_receptor, MR.fecha,ME.mensaje_emisor,ME.fecha FROM chat CH LEFT JOIN  mensaje_receptor MR ON CH.id_receptor = MR.id_receptor LEFT JOIN mensaje_emisor ME ON CH.id = ME.id_chat WHERE ME.id_emisor = ?',[request.params.id],(error,chatList)=>{
+        if (error){
+            throw error
+        }else{response.send(chatList)}
+    })
+})
+
+var port = 4000
 
 api.get('/', function (request, response) {
     response.send('ruta get')
