@@ -120,6 +120,38 @@ api.get('/api/user/:id',(request,response)=>{
         }
     })
 });
+/* listar foto de perfil y nombre de usuario */
+api.get('/api/users/chat/:id',(request,response)=>{
+    
+    connection.query('SELECT usuarios.nombre,usuarios.foto_de_perfil FROM usuarios WHERE usuarios.id= ?',[request.params.id],(error,fila)=>{
+        if(error)
+        {
+            throw error;
+        }else{
+            response.send(fila);
+        }
+    })
+});
+/* listar usuarios */
+
+api.get('/api/user/',(request,response)=>{
+    connection.query('SELECT US.id,US.nombre,US.apellido,US.foto_de_perfil FROM usuarios US',[request.params.id],(error,fila)=>{
+        if (error) {
+            throw error
+        }else{response.send(fila)}
+    })
+})
+
+api.get('/api/users/:id',(request,response)=>{
+    connection.query('SELECT usuarios.nombre,usuarios.foto_de_perfil FROM usuarios WHERE usuarios.id= ?',[request.request.id],(error,fila)=>{
+        if(error)
+        {
+            throw error
+        }else{
+            response.send(fila)
+        }
+    })
+})
 // foto de  perfil
 api.post('/api/user/aunt', (request,response)=>{
     const {email,password} = request.body;
@@ -195,6 +227,26 @@ api.post('/api/comentarios', (request,response)=>{
         }
     });
 });
+/* listar chat emisor */
+api.get('/api/chat/listems/:id', (request, response)=>{
+    connection.query('SELECT CH.id,CH.id_emisor,CH.id_receptor,US.nombre,US.foto_de_perfil FROM chat CH LEFT JOIN usuarios US ON CH.id_receptor = US.id WHERE CH.id_emisor = ?',[request.params.id],(error,result)=>{
+        if (error) {
+            throw error
+        }else{
+            response.send(result)
+        }
+    })
+})
+/* listar chat receptor */
+api.get('/api/chat/listrep/:id', (request, response)=>{
+    connection.query('SELECT CH.id,CH.id_emisor,CH.id_receptor,CH.mensaje_emisor,US.nombre,US.foto_de_perfil FROM chat CH LEFT JOIN usuarios US ON CH.id_receptor = US.id WHERE CH.id_receptor = ?',[request.params.id],(error,result)=>{
+        if (error) {
+            throw error
+        }else{
+            response.send(result)
+        }
+    })
+})
 
 /* notificaciones */
 
@@ -210,10 +262,41 @@ api.get('/api/post/notificaciones/:id',(request,response)=>{
 
 /* Chat */
 api.get('/api/chat/:id',(request,response)=>{
-    connection.query('SELECT DISTINCT CH.id, MR.mensaje_receptor, MR.fecha,ME.mensaje_emisor,ME.fecha FROM chat CH LEFT JOIN  mensaje_receptor MR ON CH.id_receptor = MR.id_receptor LEFT JOIN mensaje_emisor ME ON CH.id = ME.id_chat WHERE ME.id_emisor = ?',[request.params.id],(error,chatList)=>{
+    connection.query('SELECT * FROM mensaje_emisor UNION SELECT* FROM mensaje_receptor WHERE mensaje_receptor.id_chat = ?',[request.params.id],(error,chatList)=>{
         if (error){
             throw error
         }else{response.send(chatList)}
+    })
+})
+
+/* crear chat */
+api.post('/api/chat/enviar',(request,response)=>{
+    let chat ={
+        id_emisor : request.body.id_emisor,
+        id_receptor : request.body.id_receptor,
+        mensaje_emisor : request.body.mensaje_emisor,
+    };
+    let sql = 'INSERT INTO chat SET ?';
+    connection.query(sql,chat,function(error,result){
+ 
+        if(error)
+        {
+            throw error
+        }else{
+            response.send(result);
+        }
+    })
+})
+
+/* MENSAJES_EMISOR */
+api.get('/api/messages/emisor/:id',(request,response) =>{
+    connection.query('SELECT ME.mensaje_emisor,ME.fecha FROM chat CH LEFT JOIN mensaje_emisor ME ON CH.id = ME.id_chat WHERE CH.id = ?',[request.params.id],(error,result) =>{
+        if(error)
+        {
+            throw error
+        }else{
+           response.send(result)
+        }
     })
 })
 
