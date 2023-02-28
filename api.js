@@ -4,7 +4,10 @@ var express = require('express');
 var mysql = require('mysql');
 
 var api = express();
+
+var cors = require('cors')
 api.use(express.json());
+api.use(cors());
 
 
 var connection = mysql.createConnection({
@@ -72,7 +75,7 @@ api.put('/api/post/:id',(request,response)=>{
     let titulo = request.body.titulo;
     let contenido = request.body.contenido;
     let usuarios_id = request.body.usuarios_id;
-    let sql = "UPDATE posT SET titulo = ?, contenido = ?, usuarios_id = ? WHERE id = ?";
+    let sql = "UPDATE post SET titulo = ?, contenido = ?, usuarios_id = ? WHERE id = ?";
 
     connection.query(sql, [titulo, contenido, usuarios_id, id], function(error, result)
     {
@@ -90,7 +93,7 @@ api.put('/api/post/:id',(request,response)=>{
 api.put('/api/post/likes/:id',(request,response)=>{
     let id = request.params.id;
     let likes = request.body.likes;
-    let sql = "UPDATE posT SET likes = ? WHERE id = ?";
+    let sql = "UPDATE post SET likes = ? WHERE id = ?";
 
     connection.query(sql, [likes, id], function(error, result)
     {
@@ -107,6 +110,7 @@ api.put('/api/post/likes/:id',(request,response)=>{
 // usuario
 
 api.get('/api/user/:id',(request,response)=>{
+    
     connection.query('SELECT * FROM usuarios WHERE id = ?',[request.params.id],(error,fila)=>{
         if(error)
         {
@@ -116,9 +120,44 @@ api.get('/api/user/:id',(request,response)=>{
         }
     })
 });
+/* listar foto de perfil y nombre de usuario */
+api.get('/api/users/chat/:id',(request,response)=>{
+    
+    connection.query('SELECT usuarios.nombre,usuarios.foto_de_perfil FROM usuarios WHERE usuarios.id= ?',[request.params.id],(error,fila)=>{
+        if(error)
+        {
+            throw error;
+        }else{
+            response.send(fila);
+        }
+    })
+});
+/* listar usuarios */
+
+api.get('/api/user/',(request,response)=>{
+    connection.query('SELECT US.id,US.nombre,US.apellido,US.foto_de_perfil FROM usuarios US',[request.params.id],(error,fila)=>{
+        if (error) {
+            throw error
+        }else{response.send(fila)}
+    })
+})
+
+api.get('/api/users/:id',(request,response)=>{
+    connection.query('SELECT usuarios.nombre,usuarios.foto_de_perfil FROM usuarios WHERE usuarios.id= ?',[request.request.id],(error,fila)=>{
+        if(error)
+        {
+            throw error
+        }else{
+            response.send(fila)
+        }
+    })
+})
 // foto de  perfil
-api.get('/api/userPerfil/:id',(request,response)=>{
-    connection.query('SELECT foto_de_perfil FROM usuarios WHERE id = ?',[request.params.id],(error,fila)=>{
+api.post('/api/user/aunt', (request,response)=>{
+    const {email,password} = request.body;
+   /*  let email= request.body.email;
+    let password = request.body.password; */
+    connection.query('SELECT * FROM usuarios WHERE email = ? AND password = ?',[email, password],(error,fila)=>{
         if(error)
         {
             throw error;
@@ -137,11 +176,11 @@ api.get('/api/postFromUserId/:id',(request,response)=>{
             response.send(fila);
         }
     })
-})
+});
 
 /* comentarios */
 
-api.get('/api/comentariosFromPostId/:id',(request,response)=>{
+api.get('/api/comentarios/:id',(request,response)=>{
     connection.query('SELECT * FROM comentarios WHERE post_id = ?',[request.params.id],(error, fila)=>{
         if(error)
         {
@@ -150,9 +189,118 @@ api.get('/api/comentariosFromPostId/:id',(request,response)=>{
             response.send(fila);
         }
     })
+});
+
+api.post('api/comen',(request,response)=>{
+    let dataComentarios={
+        comentario:request.body.comentario,
+        post_id:request.body.post_id,
+        usuarios_id:request.body.usuarios_id,
+    };
+    let sqlComentarios = "INSERT INTO comentarios SET ?"
+    connection.query(sqlComentarios, dataComentarios, function(error,result)
+    {
+        if (error) {
+            throw error
+        }else{
+            response.send(result,dataComentarios);
+        }
+    });
+
+});
+
+/* crear post  */
+api.post('/api/comentarios', (request,response)=>{
+    let datosComentario ={
+        post_id:request.body.post_id,
+        comentario:request.body.comentario,
+        usuarios_id:request.body.usuarios_id,
+    };
+
+    let sql = "INSERT INTO comentarios SET ?";
+    connection.query(sql, datosComentario, function(error,result)
+    {
+        if (error) {
+            throw error
+        }else{
+            response.send(result);
+        }
+    });
+});
+/* listar chat emisor */
+api.get('/api/chat/listems/:id', (request, response)=>{
+    connection.query('SELECT CH.id,CH.id_emisor,CH.id_receptor,US.nombre,US.foto_de_perfil FROM chat CH LEFT JOIN usuarios US ON CH.id_receptor = US.id WHERE CH.id_emisor = ?',[request.params.id],(error,result)=>{
+        if (error) {
+            throw error
+        }else{
+            response.send(result)
+        }
+    })
+})
+/* listar chat receptor */
+api.get('/api/chat/listrep/:id', (request, response)=>{
+    connection.query('SELECT CH.id,CH.id_emisor,CH.id_receptor,CH.mensaje_emisor,US.nombre,US.foto_de_perfil FROM chat CH LEFT JOIN usuarios US ON CH.id_receptor = US.id WHERE CH.id_receptor = ?',[request.params.id],(error,result)=>{
+        if (error) {
+            throw error
+        }else{
+            response.send(result)
+        }
+    })
 })
 
-var port = 3000
+/* notificaciones */
+
+api.get('/api/post/notificaciones/:id',(request,response)=>{
+    connection.query('SELECT N.tipo,U.nombre,U.apellido,U.foto_de_perfil FROM notificaciones N LEFT JOIN usuarios U ON N.id_usuario = U.id LEFT JOIN post P ON N.id_post = P.id WHERE P.usuarios_id = ?',[request.params.id], (error,fila)=>{
+        if (error) {
+            throw error
+        }else{
+            response.send(fila);
+        }
+    })
+})
+
+/* Chat */
+api.get('/api/chat/:id',(request,response)=>{
+    connection.query('SELECT * FROM mensaje_emisor UNION SELECT* FROM mensaje_receptor WHERE mensaje_receptor.id_chat = ?',[request.params.id],(error,chatList)=>{
+        if (error){
+            throw error
+        }else{response.send(chatList)}
+    })
+})
+
+/* crear chat */
+api.post('/api/chat/enviar',(request,response)=>{
+    let chat ={
+        id_emisor : request.body.id_emisor,
+        id_receptor : request.body.id_receptor,
+        mensaje_emisor : request.body.mensaje_emisor,
+    };
+    let sql = 'INSERT INTO chat SET ?';
+    connection.query(sql,chat,function(error,result){
+ 
+        if(error)
+        {
+            throw error
+        }else{
+            response.send(result);
+        }
+    })
+})
+
+/* MENSAJES_EMISOR */
+api.get('/api/messages/emisor/:id',(request,response) =>{
+    connection.query('SELECT ME.mensaje_emisor,ME.fecha FROM chat CH LEFT JOIN mensaje_emisor ME ON CH.id = ME.id_chat WHERE CH.id = ?',[request.params.id],(error,result) =>{
+        if(error)
+        {
+            throw error
+        }else{
+           response.send(result)
+        }
+    })
+})
+
+var port = 4000
 
 api.get('/', function (request, response) {
     response.send('ruta get')
